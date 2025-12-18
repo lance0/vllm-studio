@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  # LiteLLM - API gateway (handles routing, format translation, cost tracking)
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: vllm-studio-litellm
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./config/litellm.yaml:/app/config.yaml
+      - ./data:/app/data
+    environment:
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-master}
+      - DATABASE_URL=sqlite:///app/data/litellm.db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend (optional)
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+    container_name: vllm-studio-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+      - NEXT_PUBLIC_LITELLM_URL=${NEXT_PUBLIC_LITELLM_URL:-http://localhost:4000}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

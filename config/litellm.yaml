@@ -1,0 +1,38 @@
+# LiteLLM Proxy Configuration
+# Handles API routing, format translation, and cost tracking
+
+model_list:
+  # Local vLLM backend (managed by controller)
+  - model_name: "*"
+    litellm_params:
+      model: "hosted_vllm/*"
+      api_base: "http://localhost:8000/v1"
+      stream_timeout: 600
+      timeout: 600
+
+# Router settings
+router_settings:
+  routing_strategy: "simple-shuffle"
+  num_retries: 2
+  timeout: 600
+  retry_after: 5
+  enable_pre_call_checks: true
+
+# LiteLLM settings
+litellm_settings:
+  drop_params: true
+  set_verbose: false
+  request_timeout: 600
+  telemetry: false
+
+# General settings
+general_settings:
+  master_key: "${LITELLM_MASTER_KEY:sk-master}"
+  database_url: "sqlite:///./data/litellm.db"
+
+  # Disable UI in production, enable for debugging
+  ui_access_mode: "admin_only"
+
+  # Logging
+  json_logs: true
+  store_model_in_db: true

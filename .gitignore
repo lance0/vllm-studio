@@ -1,0 +1,42 @@
+# Environment
+.env
+.env.*
+*.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Data (local)
+data/
+*.db
+
+# Logs
+*.log
+logs/
+
+# Recipes (user-specific)
+recipes/
+
+# Node
+node_modules/
+.next/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*~
+
+# OS
+.DS_Store
+
+# Test
+.pytest_cache/
+.coverage

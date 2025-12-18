@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+:root {
+  /* Warm Paper Design - Light Mode */
+  --background: hsl(40, 30%, 97%);
+  --foreground: hsl(30, 15%, 15%);
+  --muted: hsl(35, 15%, 60%);
+  --muted-foreground: hsl(30, 12%, 45%);
+  --border: hsl(35, 15%, 85%);
+  --card: hsl(40, 25%, 95%);
+  --card-hover: hsl(40, 20%, 92%);
+  --accent: hsl(35, 20%, 88%);
+  --accent-hover: hsl(35, 25%, 82%);
+  --accent-foreground: hsl(30, 15%, 15%);
+  --success: hsl(142, 50%, 40%);
+  --warning: hsl(38, 92%, 50%);
+  --error: hsl(0, 65%, 50%);
+  --ring: hsl(30, 20%, 25%);
+}
+
+.dark {
+  /* Warm Paper Design - Dark Mode */
+  --background: hsl(30, 5%, 10.5%);
+  --foreground: hsl(40, 20%, 92%);
+  --muted: hsl(30, 8%, 40%);
+  --muted-foreground: hsl(35, 12%, 60%);
+  --border: hsl(30, 5%, 20%);
+  --card: hsl(30, 5%, 12%);
+  --card-hover: hsl(30, 5%, 15%);
+  --accent: hsl(35, 8%, 18%);
+  --accent-hover: hsl(35, 10%, 22%);
+  --accent-foreground: hsl(40, 20%, 92%);
+  --success: hsl(142, 45%, 45%);
+  --warning: hsl(38, 85%, 55%);
+  --error: hsl(0, 60%, 55%);
+  --ring: hsl(35, 15%, 70%);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Focus */
+:focus-visible {
+  outline: none;
+  ring: 2px solid var(--ring);
+  ring-offset: 2px;
+  ring-offset-color: var(--background);
+}
+
+/* Selection */
+::selection {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+/* Animations */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
