@@ -77,7 +77,7 @@ export function ChatSidebar({
         {/* Sidebar */}
         <div className="fixed left-0 top-0 bottom-0 w-72 bg-[var(--card)] border-r border-[var(--border)] flex flex-col z-50 animate-slide-in-left">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
+          <div className="flex items-center justify-between px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top,0))] border-b border-[var(--border)]">
             <div className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-[var(--muted)]" />
               <span className="font-medium">Conversations</span>

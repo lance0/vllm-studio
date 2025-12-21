@@ -313,7 +313,7 @@ export default function Nav() {
 
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--card)]">
-        <div className="flex h-12 md:h-14 items-center justify-between px-3 md:px-4">
+        <div className="flex h-12 md:h-14 items-center justify-between px-3 md:px-4 pt-[env(safe-area-inset-top,0)]">
           {/* Logo & Nav Links */}
           <div className="flex items-center gap-3 md:gap-6">
             {/* Mobile Menu Button */}
@@ -449,7 +449,7 @@ export default function Nav() {
           {/* Drawer */}
           <div className="absolute left-0 top-0 bottom-0 w-72 bg-[var(--card)] border-r border-[var(--border)] animate-slide-in-left">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
+            <div className="flex items-center justify-between p-4 pt-[calc(1rem+env(safe-area-inset-top,0))] border-b border-[var(--border)]">
               <div className="flex items-center gap-2">
                 <Layers className="h-5 w-5 text-[var(--accent)]" />
                 <span className="font-semibold">vLLM Studio</span>
