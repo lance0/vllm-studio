@@ -312,8 +312,8 @@ export default function Nav() {
       ) : null}
 
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--card)]">
-        <div className="flex h-12 md:h-14 items-center justify-between px-3 md:px-4 pt-[env(safe-area-inset-top,0)]">
+      <header className="sticky top-0 z-50 bg-[var(--card)] pt-[env(safe-area-inset-top,0)]">
+        <div className="flex h-12 md:h-14 items-center justify-between px-3 md:px-4 border-b border-[var(--border)]">
           {/* Logo & Nav Links */}
           <div className="flex items-center gap-3 md:gap-6">
             {/* Mobile Menu Button */}

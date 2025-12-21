@@ -1239,7 +1239,8 @@ export default function ChatPage() {
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Chat Header */}
-          <div className="flex items-center justify-between gap-2 md:gap-3 px-3 md:px-4 py-2 pt-[calc(0.5rem+env(safe-area-inset-top,0))] md:pt-2 border-b border-[var(--border)] bg-[var(--card)]">
+          <div className="bg-[var(--card)] pt-[env(safe-area-inset-top,0)] md:pt-0">
+            <div className="flex items-center justify-between gap-2 md:gap-3 px-3 md:px-4 py-2 border-b border-[var(--border)]">
             <div className="flex items-center gap-2 min-w-0">
               {/* Mobile: History button */}
               {isMobile && (
@@ -1378,6 +1379,7 @@ export default function ChatPage() {
               >
                 <Plus className="h-4 w-4 text-[var(--muted)]" />
               </button>
+            </div>
             </div>
           </div>
 

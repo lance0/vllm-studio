@@ -46,7 +46,20 @@ _switch_lock = asyncio.Lock()
 _broadcast_task: Optional[asyncio.Task] = None
 
 import logging
+import time
+
 logger = logging.getLogger(__name__)
+access_logger = logging.getLogger("vllm_studio.access")
+
+# Configure access logger
+if not access_logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter(
+        '%(asctime)s ACCESS %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    ))
+    access_logger.addHandler(handler)
+    access_logger.setLevel(logging.INFO)
 
 
 def get_store() -> RecipeStore:
@@ -56,20 +69,73 @@ def get_store() -> RecipeStore:
     return _store
 
 
-# --- Authentication middleware ---
+# --- Access logging & authentication middleware ---
 @app.middleware("http")
-async def auth_middleware(request: Request, call_next):
-    if not settings.api_key:
-        return await call_next(request)
+async def access_logging_middleware(request: Request, call_next):
+    """Log all requests with detailed info for security monitoring."""
+    start_time = time.time()
 
-    if request.url.path in {"/health", "/docs", "/openapi.json", "/redoc"}:
-        return await call_next(request)
+    # Extract request info
+    client_ip = request.headers.get("CF-Connecting-IP") or \
+                request.headers.get("X-Forwarded-For", "").split(",")[0].strip() or \
+                request.client.host if request.client else "unknown"
+    method = request.method
+    path = request.url.path
+    query = str(request.url.query) if request.url.query else ""
+    user_agent = request.headers.get("User-Agent", "unknown")[:100]
+    referer = request.headers.get("Referer", "-")[:200]
+    auth_header = request.headers.get("Authorization", "")
+    has_auth = bool(auth_header)
+    auth_valid = False
 
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer ") or auth.split(" ", 1)[1] != settings.api_key:
-        return JSONResponse(status_code=401, content={"error": "Invalid or missing API key"})
+    # Check auth status
+    public_paths = {"/health", "/docs", "/openapi.json", "/redoc", "/metrics"}
+    is_public = path in public_paths
 
-    return await call_next(request)
+    if settings.api_key:
+        if auth_header.startswith("Bearer "):
+            auth_valid = auth_header.split(" ", 1)[1] == settings.api_key
+    else:
+        auth_valid = True  # No API key configured
+
+    # Determine if request should be blocked
+    blocked = False
+    if settings.api_key and not is_public and not auth_valid:
+        blocked = True
+
+    # Process request
+    if blocked:
+        response = JSONResponse(status_code=401, content={"error": "Invalid or missing API key"})
+        status_code = 401
+    else:
+        response = await call_next(request)
+        status_code = response.status_code
+
+    # Calculate duration
+    duration_ms = (time.time() - start_time) * 1000
+
+    # Log with security-relevant details
+    log_parts = [
+        f"ip={client_ip}",
+        f"method={method}",
+        f"path={path}",
+        f"query={query}" if query else None,
+        f"status={status_code}",
+        f"duration={duration_ms:.1f}ms",
+        f"auth={'valid' if auth_valid else ('invalid' if has_auth else 'none')}",
+        f"blocked={blocked}",
+        f"ua={user_agent}",
+        f"referer={referer}" if referer != "-" else None,
+    ]
+    log_msg = " | ".join(filter(None, log_parts))
+
+    # Log level based on status
+    if blocked or status_code >= 400:
+        access_logger.warning(log_msg)
+    else:
+        access_logger.info(log_msg)
+
+    return response
 
 
 # --- Real-time events (SSE) startup/shutdown ---

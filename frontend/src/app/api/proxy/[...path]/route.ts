@@ -35,13 +35,27 @@ export async function DELETE(
   return handleRequest(request, 'DELETE', path);
 }
 
+function getClientInfo(request: NextRequest) {
+  const ip = request.headers.get('CF-Connecting-IP') ||
+             request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ||
+             request.headers.get('X-Real-IP') ||
+             'unknown';
+  const country = request.headers.get('CF-IPCountry') || '-';
+  const ua = request.headers.get('User-Agent')?.slice(0, 80) || 'unknown';
+  return { ip, country, ua };
+}
+
 async function handleRequest(request: NextRequest, method: string, path: string[]) {
+  const startTime = Date.now();
+  const client = getClientInfo(request);
+
   try {
     const url = new URL(request.url);
     const searchParams = url.searchParams.toString();
     const targetUrl = `${BACKEND_URL}/${path.join('/')}${searchParams ? `?${searchParams}` : ''}`;
+    const hasAuth = Boolean(request.headers.get('authorization'));
 
-    console.log(`Proxying ${method} request to:`, targetUrl);
+    console.log(`[PROXY] ip=${client.ip} | country=${client.country} | method=${method} | path=/${path.join('/')} | auth=${hasAuth ? 'present' : 'none'}`);
 
     const headers: HeadersInit = {
       ...(request.headers.get('accept') ? { Accept: request.headers.get('accept') as string } : {}),
@@ -87,7 +101,8 @@ async function handleRequest(request: NextRequest, method: string, path: string[
     });
 
   } catch (error) {
-    console.error('Proxy error:', error);
+    const duration = Date.now() - startTime;
+    console.error(`[PROXY ERROR] ip=${client.ip} | country=${client.country} | method=${method} | path=/${path.join('/')} | duration=${duration}ms | error=${String(error)}`);
     return NextResponse.json(
       { error: 'Internal server error', details: String(error) },
       { status: 500 }

@@ -64,16 +64,23 @@ const mergeStreamingText = (prevFull: string, incoming: string): { nextFull: str
   return { nextFull: prev + next, emit: next };
 };
 
+function getClientInfo(req: NextRequest) {
+  const ip = req.headers.get('CF-Connecting-IP') ||
+             req.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ||
+             req.headers.get('X-Real-IP') ||
+             'unknown';
+  const country = req.headers.get('CF-IPCountry') || '-';
+  return { ip, country };
+}
+
 export async function POST(req: NextRequest) {
+  const client = getClientInfo(req);
+
   try {
     const body = await req.json();
     const { messages, model, tools, ...rest } = body;
 
-    console.log('[Chat API] Request:', {
-      model,
-      messageCount: messages?.length,
-      toolCount: tools?.length,
-    });
+    console.log(`[CHAT] ip=${client.ip} | country=${client.country} | model=${model || 'default'} | messages=${messages?.length || 0} | tools=${tools?.length || 0}`);
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: 'Messages required' }), {
@@ -235,7 +242,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Chat API] Error:', error);
+    console.error(`[CHAT ERROR] ip=${client.ip} | country=${client.country} | error=${String(error)}`);
     return new Response(JSON.stringify({ error: String(error) }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
