@@ -1,0 +1,3 @@
+# Python dependencies for LiteLLM callback (config/tool_call_handler.py)
+# Install: pip install -r config/requirements.txt
+litellm>=1.0.0

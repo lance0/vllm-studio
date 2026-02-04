@@ -8,25 +8,27 @@ Thank you for your interest in contributing to vLLM Studio!
 2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/vllm-studio.git`
 3. Create a branch: `git checkout -b feature/your-feature`
 4. Make your changes
-5. Run tests: `pytest tests/`
+5. Run tests (see below)
 6. Commit: `git commit -m "Add your feature"`
 7. Push: `git push origin feature/your-feature`
 8. Open a Pull Request
 
 ## Development Setup
 
-### Controller (Python)
+### Controller (Bun + TypeScript)
 
 ```bash
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate
+cd controller
+bun install
+./start.sh --dev   # or: bun run dev
+```
 
-# Install in development mode
-pip install -e ".[dev]"
+### CLI (Bun + TypeScript)
 
-# Run with auto-reload
-./start.sh --dev
+```bash
+cd cli
+bun install
+bun run build
 ```
 
 ### Frontend (Next.js)
@@ -37,10 +39,20 @@ npm install
 npm run dev
 ```
 
+## Running Tests
+
+```bash
+# Controller
+cd controller && bun test
+
+# Frontend
+cd frontend && npm test
+```
+
 ## Code Style
 
-- **Python**: We use `ruff` for linting and formatting
-- **TypeScript**: We use ESLint and Prettier
+- **TypeScript (controller, cli)**: Checked with `bun run check`
+- **TypeScript (frontend)**: ESLint + Prettier
 
 ## Pull Request Guidelines
 

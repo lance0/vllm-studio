@@ -16,38 +16,38 @@ Comprehensive module mapping, state machines, and architectural patterns for vLL
 
 ```
                               ┌─────────────┐
-                              │   cli.py    │
+                              │   main.ts   │
                               └──────┬──────┘
                                      │
                               ┌──────▼──────┐
-                              │   app.py    │ ◄── Entry point, lifespan
+                              │  http/app   │ ◄── Hono server
                               └──────┬──────┘
                                      │
         ┌────────────────────────────┼────────────────────────────┐
         │                            │                            │
         ▼                            ▼                            ▼
 ┌───────────────┐           ┌───────────────┐           ┌───────────────┐
-│   config.py   │           │   events.py   │           │   store.py    │
-│   Settings    │           │ EventManager  │           │  *Store       │
+│  config/env   │           │ event-manager │           │   stores/*    │
+│   Settings    │           │  SSE events   │           │  *Store       │
 └───────────────┘           └───────────────┘           └───────────────┘
         │                            │                            │
         │                            │                            │
         ▼                            ▼                            ▼
 ┌───────────────┐           ┌───────────────┐           ┌───────────────┐
-│  models.py    │           │  routes/*     │◄──────────│  models.py    │
-│ Recipe, MCP   │◄──────────│  API handlers │           │ Pydantic      │
+│ types/models  │           │  routes/*     │◄──────────│ types/models  │
+│ Recipe, MCP   │◄──────────│  API handlers │           │  TypeScript   │
 └───────────────┘           └───────┬───────┘           └───────────────┘
         │                           │
         │                           │
         ▼                           ▼
 ┌───────────────┐           ┌───────────────┐
-│ backends.py   │◄──────────│  process.py   │
+│   backends    │◄──────────│process-manager│
 │ Cmd builders  │           │ Launch/Evict  │
 └───────────────┘           └───────────────┘
                                     │
                                     ▼
                             ┌───────────────┐
-                            │   gpu.py      │
+                            │  services/gpu │
                             │ GPU detection │
                             └───────────────┘
 ```

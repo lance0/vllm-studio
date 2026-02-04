@@ -20,10 +20,9 @@ cd frontend && npm install
 ## Run All Checks
 
 ```bash
-# Controller (6 checks total)
+# Controller (5 checks total)
 cd controller && bun run check
 # ✅ Type check (tsc)
-# ✅ Lint (ESLint)
 # ✅ Dead code detection (knip)
 # ✅ Duplicate code detection (jscpd)
 # ✅ Unused dependencies (depcheck)

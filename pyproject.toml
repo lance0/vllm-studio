@@ -1,3 +1,8 @@
+# NOTE: This pyproject.toml is LEGACY from the Python-era controller.
+# The controller is now Bun + TypeScript (see controller/src/).
+# These Python dependencies are ONLY used for config/tool_call_handler.py
+# (LiteLLM callback). The vllm-studio CLI entry point below does NOT work.
+
 [project]
 name = "vllm-studio"
 version = "0.3.1"

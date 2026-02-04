@@ -31,15 +31,19 @@ Model lifecycle management for vLLM and SGLang inference servers.
 ## Quick Start
 
 ```bash
-# Install controller
-pip install -e .
-
-# Run controller
-vllm-studio
+# Install and run controller
+cd controller && bun install
+./start.sh          # or: bun run controller/src/main.ts
 
 # (Optional) Run frontend
 cd frontend && npm install && npm run dev
 ```
+
+**Tech Stack:**
+- Controller: Bun + TypeScript + Hono + SQLite
+- Frontend: Next.js + React + TypeScript
+- CLI: Bun + TypeScript
+- Optional: LiteLLM (Python callback for tool handling)
 
 ## API Reference
 
@@ -142,16 +146,18 @@ VLLM_STUDIO_API_KEY=your-key    # Optional auth
 ```
 vllm-studio/
 ├── controller/
-│   ├── app.py         # FastAPI endpoints
-│   ├── process.py     # Process management
-│   ├── backends.py    # vLLM/SGLang command builders
-│   ├── models.py      # Pydantic models
-│   ├── store.py       # SQLite storage
-│   ├── config.py      # Settings
-│   └── cli.py         # Entry point
-├── frontend/          # Next.js web UI
+│   └── src/
+│       ├── main.ts           # Entry point
+│       ├── http/app.ts       # Hono server
+│       ├── routes/           # API route handlers
+│       ├── services/         # Business logic
+│       ├── stores/           # SQLite stores
+│       └── core/             # Utilities
+├── cli/                      # Bun CLI app
+├── frontend/                 # Next.js web UI
 ├── config/
-│   └── litellm.yaml   # LiteLLM config (optional)
+│   ├── litellm.yaml          # LiteLLM config
+│   └── tool_call_handler.py  # LiteLLM callback (Python)
 └── docker-compose.yml
 ```
 
