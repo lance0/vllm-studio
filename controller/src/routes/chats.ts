@@ -1,8 +1,15 @@
 // CRITICAL
 import type { Hono } from "hono";
 import { randomUUID } from "node:crypto";
+import { ZodError } from "zod";
 import type { AppContext } from "../types/context";
-import { notFound } from "../core/errors";
+import { badRequest, notFound } from "../core/errors";
+import {
+  createChatSessionSchema,
+  updateChatSessionSchema,
+  addChatMessageSchema,
+  forkChatSessionSchema,
+} from "../stores/chat-schemas";
 
 /**
  * Register chat session routes.
@@ -24,24 +31,36 @@ export const registerChatsRoutes = (app: Hono, context: AppContext): void => {
   });
 
   app.post("/chats", async (ctx) => {
-    const body = (await ctx.req.json()) as Record<string, unknown>;
-    const sessionId = randomUUID();
-    const title = typeof body["title"] === "string" ? body["title"] : "New Chat";
-    const model = typeof body["model"] === "string" ? body["model"] : undefined;
-    const session = context.stores.chatStore.createSession(sessionId, title, model);
-    return ctx.json({ session });
+    try {
+      const body = await ctx.req.json();
+      const parsed = createChatSessionSchema.parse(body);
+      const sessionId = randomUUID();
+      const session = context.stores.chatStore.createSession(sessionId, parsed.title, parsed.model);
+      return ctx.json({ session });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw badRequest(error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", "));
+      }
+      throw error;
+    }
   });
 
   app.put("/chats/:sessionId", async (ctx) => {
-    const sessionId = ctx.req.param("sessionId");
-    const body = (await ctx.req.json()) as Record<string, unknown>;
-    const title = typeof body["title"] === "string" ? body["title"] : undefined;
-    const model = typeof body["model"] === "string" ? body["model"] : undefined;
-    const updated = context.stores.chatStore.updateSession(sessionId, title, model);
-    if (!updated) {
-      throw notFound("Session not found");
+    try {
+      const sessionId = ctx.req.param("sessionId");
+      const body = await ctx.req.json();
+      const parsed = updateChatSessionSchema.parse(body);
+      const updated = context.stores.chatStore.updateSession(sessionId, parsed.title, parsed.model);
+      if (!updated) {
+        throw notFound("Session not found");
+      }
+      return ctx.json({ success: true });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw badRequest(error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", "));
+      }
+      throw error;
     }
-    return ctx.json({ success: true });
   });
 
   app.delete("/chats/:sessionId", async (ctx) => {
@@ -54,31 +73,31 @@ export const registerChatsRoutes = (app: Hono, context: AppContext): void => {
   });
 
   app.post("/chats/:sessionId/messages", async (ctx) => {
-    const sessionId = ctx.req.param("sessionId");
-    const body = (await ctx.req.json()) as Record<string, unknown>;
-    const messageId = typeof body["id"] === "string" ? body["id"] : randomUUID();
-    const role = typeof body["role"] === "string" ? body["role"] : "user";
-    const content = typeof body["content"] === "string" ? body["content"] : undefined;
-    const model = typeof body["model"] === "string" ? body["model"] : undefined;
-    const toolCalls = Array.isArray(body["tool_calls"]) ? body["tool_calls"] : undefined;
-    const promptTokens = typeof body["request_prompt_tokens"] === "number" ? body["request_prompt_tokens"] : undefined;
-    const toolsTokens = typeof body["request_tools_tokens"] === "number" ? body["request_tools_tokens"] : undefined;
-    const totalInputTokens = typeof body["request_total_input_tokens"] === "number" ? body["request_total_input_tokens"] : undefined;
-    const completionTokens = typeof body["request_completion_tokens"] === "number" ? body["request_completion_tokens"] : undefined;
+    try {
+      const sessionId = ctx.req.param("sessionId");
+      const body = await ctx.req.json();
+      const parsed = addChatMessageSchema.parse(body);
+      const messageId = parsed.id ?? randomUUID();
 
-    const message = context.stores.chatStore.addMessage(
-      sessionId,
-      messageId,
-      role,
-      content,
-      model,
-      toolCalls,
-      promptTokens,
-      toolsTokens,
-      totalInputTokens,
-      completionTokens,
-    );
-    return ctx.json(message);
+      const message = context.stores.chatStore.addMessage(
+        sessionId,
+        messageId,
+        parsed.role,
+        parsed.content,
+        parsed.model,
+        parsed.tool_calls,
+        parsed.request_prompt_tokens,
+        parsed.request_tools_tokens,
+        parsed.request_total_input_tokens,
+        parsed.request_completion_tokens,
+      );
+      return ctx.json(message);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw badRequest(error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", "));
+      }
+      throw error;
+    }
   });
 
   app.get("/chats/:sessionId/usage", async (ctx) => {
@@ -87,16 +106,27 @@ export const registerChatsRoutes = (app: Hono, context: AppContext): void => {
   });
 
   app.post("/chats/:sessionId/fork", async (ctx) => {
-    const sessionId = ctx.req.param("sessionId");
-    const body = (await ctx.req.json()) as Record<string, unknown>;
-    const newId = randomUUID();
-    const messageId = typeof body["message_id"] === "string" ? body["message_id"] : undefined;
-    const model = typeof body["model"] === "string" ? body["model"] : undefined;
-    const title = typeof body["title"] === "string" ? body["title"] : undefined;
-    const session = context.stores.chatStore.forkSession(sessionId, newId, messageId, model, title);
-    if (!session) {
-      throw notFound("Session not found");
+    try {
+      const sessionId = ctx.req.param("sessionId");
+      const body = await ctx.req.json();
+      const parsed = forkChatSessionSchema.parse(body);
+      const newId = randomUUID();
+      const session = context.stores.chatStore.forkSession(
+        sessionId,
+        newId,
+        parsed.message_id,
+        parsed.model,
+        parsed.title,
+      );
+      if (!session) {
+        throw notFound("Session not found");
+      }
+      return ctx.json({ session });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw badRequest(error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", "));
+      }
+      throw error;
     }
-    return ctx.json({ session });
   });
 };

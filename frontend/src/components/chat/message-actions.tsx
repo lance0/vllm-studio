@@ -1,9 +1,9 @@
 // CRITICAL
 'use client';
 
+import { useState, useCallback } from 'react';
 import { Bookmark, BookmarkCheck, ThumbsUp, ThumbsDown, Copy, Check, MoreVertical } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAppStore } from '@/store';
 
 interface MessageActionsProps {
   content: string;
@@ -17,41 +17,45 @@ interface Reaction {
   count: number;
 }
 
+interface MessageActionState {
+  copied: boolean;
+  bookmarked: boolean;
+  reaction: Reaction | null;
+  showMenu: boolean;
+}
+
 export function MessageActions({ content, messageId, onBookmark, onReact }: MessageActionsProps) {
-  const messageState = useAppStore(
-    (state) =>
-      state.legacyMessageActions[messageId] ?? {
-        copied: false,
-        bookmarked: false,
-        reaction: null,
-        showMenu: false,
-      },
-  );
-  const setLegacyMessageActions = useAppStore((state) => state.setLegacyMessageActions);
-  const { copied, bookmarked, reaction, showMenu } = messageState as {
-    copied: boolean;
-    bookmarked: boolean;
-    reaction: Reaction | null;
-    showMenu: boolean;
-  };
+  // Local state instead of global Zustand store (migrated from legacyMessageActions)
+  const [state, setState] = useState<MessageActionState>(() => ({
+    copied: false,
+    bookmarked: false,
+    reaction: null,
+    showMenu: false,
+  }));
 
-  const handleCopy = () => {
+  const { copied, bookmarked, reaction } = state;
+
+  const updateState = useCallback((updates: Partial<MessageActionState>) => {
+    setState(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(content);
-    setLegacyMessageActions(messageId, { copied: true });
-    setTimeout(() => setLegacyMessageActions(messageId, { copied: false }), 2000);
-  };
+    updateState({ copied: true });
+    setTimeout(() => updateState({ copied: false }), 2000);
+  }, [content, updateState]);
 
-  const handleBookmark = () => {
+  const handleBookmark = useCallback(() => {
     const newState = !bookmarked;
-    setLegacyMessageActions(messageId, { bookmarked: newState });
+    updateState({ bookmarked: newState });
     onBookmark?.(messageId, newState);
-  };
+  }, [bookmarked, messageId, onBookmark, updateState]);
 
-  const handleReaction = (type: 'up' | 'down') => {
+  const handleReaction = useCallback((type: 'up' | 'down') => {
     const newReaction = reaction?.type === type ? null : { type, count: (reaction?.type === type ? reaction.count - 1 : reaction?.count || 0) + 1 };
-    setLegacyMessageActions(messageId, { reaction: newReaction });
+    updateState({ reaction: newReaction });
     onReact?.(messageId, newReaction?.type || null);
-  };
+  }, [reaction, messageId, onReact, updateState]);
 
   return (
     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">

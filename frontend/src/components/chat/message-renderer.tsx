@@ -1,7 +1,7 @@
 // CRITICAL
 'use client';
 
-import { useMemo, useEffect, useRef, useId } from 'react';
+import { useMemo, useEffect, useRef, useId, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ChevronDown, ChevronRight, Brain, Copy, Check, AlertCircle, Play } from 'lucide-react';
@@ -137,15 +137,14 @@ export function splitThinking(content: string): {
 }
 
 function ThinkingBlock({ content, isStreaming }: ThinkingBlockProps) {
-  const blockId = useId();
-  const isExpanded = useAppStore((state) => state.legacyThinkingExpanded[blockId] ?? false);
-  const setLegacyThinkingExpanded = useAppStore((state) => state.setLegacyThinkingExpanded);
+  // Local state instead of global Zustand store (migrated from legacyThinkingExpanded)
+  const [isExpanded, setIsExpanded] = useState(false);
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
 
   return (
     <div className="my-2 md:my-3">
       <button
-        onClick={() => setLegacyThinkingExpanded(blockId, !isExpanded)}
+        onClick={() => setIsExpanded((prev: boolean) => !prev)}
         className="flex items-center gap-1.5 text-xs text-[#b8b4ad] hover:text-[#e8e4dd] transition-colors"
       >
         {isExpanded ? (

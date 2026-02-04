@@ -1,7 +1,7 @@
 // CRITICAL
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   Activity,
   AlertTriangle,
@@ -21,7 +21,6 @@ import {
   CompactionStrategy,
   formatTokenCount,
 } from '@/lib/context-manager';
-import { useAppStore } from '@/store';
 
 interface ContextIndicatorProps {
   stats: ContextStats;
@@ -51,10 +50,18 @@ export function ContextIndicator({
   canSendMessage,
   utilizationLevel,
 }: ContextIndicatorProps) {
-  const { showDetails, showHistory, showSettings } = useAppStore(
-    (state) => state.legacyContextIndicator,
-  );
-  const setLegacyContextIndicator = useAppStore((state) => state.setLegacyContextIndicator);
+  // Local state instead of global Zustand store (migrated from legacyContextIndicator)
+  const [panelState, setPanelState] = useState(() => ({
+    showDetails: false,
+    showHistory: false,
+    showSettings: false,
+  }));
+
+  const { showDetails, showHistory, showSettings } = panelState;
+
+  const updatePanelState = useCallback((updates: Partial<typeof panelState>) => {
+    setPanelState(prev => ({ ...prev, ...updates }));
+  }, []);
 
   const colors = LEVEL_COLORS[utilizationLevel];
   const percentage = Math.round(stats.utilization * 100);
@@ -63,7 +70,7 @@ export function ContextIndicator({
     <div className="relative">
       {/* Compact indicator */}
       <button
-        onClick={() => setLegacyContextIndicator({ showDetails: !showDetails })}
+        onClick={() => updatePanelState({ showDetails: !showDetails })}
         className={`flex items-center gap-2 px-2 py-1 rounded-lg transition-colors ${colors.bg} hover:opacity-80`}
         title={`Context: ${formatTokenCount(stats.currentTokens)} / ${formatTokenCount(stats.maxContext)} tokens (${percentage}%)`}
       >
@@ -98,21 +105,21 @@ export function ContextIndicator({
             </div>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setLegacyContextIndicator({ showHistory: !showHistory })}
+                onClick={() => updatePanelState({ showHistory: !showHistory })}
                 className="p-1.5 hover:bg-[#363432] rounded"
                 title="Compaction history"
               >
                 <History className="h-4 w-4 text-[#9a9088]" />
               </button>
               <button
-                onClick={() => setLegacyContextIndicator({ showSettings: !showSettings })}
+                onClick={() => updatePanelState({ showSettings: !showSettings })}
                 className="p-1.5 hover:bg-[#363432] rounded"
                 title="Settings"
               >
                 <Settings className="h-4 w-4 text-[#9a9088]" />
               </button>
               <button
-                onClick={() => setLegacyContextIndicator({ showDetails: false })}
+                onClick={() => updatePanelState({ showDetails: false })}
                 className="p-1.5 hover:bg-[#363432] rounded"
               >
                 <X className="h-4 w-4 text-[#9a9088]" />

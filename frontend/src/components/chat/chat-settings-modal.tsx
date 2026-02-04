@@ -1,9 +1,8 @@
 // CRITICAL
 'use client';
 
-import { useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, Settings, Trash2, Info, Search, Globe, Zap, FileText, BookOpen, Sparkles, Brain, Database, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
-import { useAppStore } from '@/store';
 
 export interface DeepResearchSettings {
   enabled: boolean;
@@ -77,28 +76,26 @@ export function ChatSettingsModal({
   onRagSettingsChange,
   onTestRagConnection,
 }: ChatSettingsModalProps) {
-  const legacyChatSettings = useAppStore((state) => state.legacyChatSettings);
-  const setLegacyChatSettings = useAppStore((state) => state.setLegacyChatSettings);
-  const {
-    localPrompt,
-    forkSelection,
-    localDeepResearch,
-    localRagSettings,
-    ragTestStatus,
-    ragTestResult,
-  } = legacyChatSettings;
+  // Local state instead of global Zustand store (migrated from legacyChatSettings)
+  const [localPrompt, setLocalPrompt] = useState(systemPrompt);
+  const [forkSelection, setForkSelection] = useState<Record<string, boolean>>({});
+  const [localDeepResearch, setLocalDeepResearch] = useState<DeepResearchSettings>(deepResearch);
+  const [localRagSettings, setLocalRagSettings] = useState<RAGSettings>(ragSettings);
+  const [ragTestStatus, setRagTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [ragTestResult, setRagTestResult] = useState<string | null>(null);
+
+  // Sync external props to local state when they change
+  useEffect(() => {
+    setLocalPrompt(systemPrompt);
+  }, [systemPrompt]);
 
   useEffect(() => {
-    setLegacyChatSettings({ localPrompt: systemPrompt });
-  }, [setLegacyChatSettings, systemPrompt]);
+    setLocalDeepResearch(deepResearch);
+  }, [deepResearch]);
 
   useEffect(() => {
-    setLegacyChatSettings({ localDeepResearch: deepResearch });
-  }, [deepResearch, setLegacyChatSettings]);
-
-  useEffect(() => {
-    setLegacyChatSettings({ localRagSettings: ragSettings });
-  }, [ragSettings, setLegacyChatSettings]);
+    setLocalRagSettings(ragSettings);
+  }, [ragSettings]);
 
   useEffect(() => {
     // Load from localStorage on mount
@@ -124,56 +121,48 @@ export function ChatSettingsModal({
     onClose();
   };
 
-  const handleTestRagConnection = async () => {
+  const handleTestRagConnection = useCallback(async () => {
     if (!onTestRagConnection) return;
-    setLegacyChatSettings({ ragTestStatus: 'testing', ragTestResult: null });
+    setRagTestStatus('testing');
+    setRagTestResult(null);
     try {
       const result = await onTestRagConnection();
       if (result.status === 'ok' || result.status === 'healthy') {
-        setLegacyChatSettings({
-          ragTestStatus: 'success',
-          ragTestResult:
-            result.documents_count !== undefined
-              ? `Connected (${result.documents_count} documents)`
-              : 'Connected',
-        });
+        setRagTestStatus('success');
+        setRagTestResult(
+          result.documents_count !== undefined
+            ? `Connected (${result.documents_count} documents)`
+            : 'Connected'
+        );
       } else {
-        setLegacyChatSettings({
-          ragTestStatus: 'error',
-          ragTestResult: result.status || 'Connection failed',
-        });
+        setRagTestStatus('error');
+        setRagTestResult(result.status || 'Connection failed');
       }
     } catch (error) {
-      setLegacyChatSettings({
-        ragTestStatus: 'error',
-        ragTestResult: error instanceof Error ? error.message : 'Connection failed',
-      });
+      setRagTestStatus('error');
+      setRagTestResult(error instanceof Error ? error.message : 'Connection failed');
     }
-  };
+  }, [onTestRagConnection]);
 
-  const updateRagSettings = (updates: Partial<RAGSettings>) => {
-    setLegacyChatSettings({
-      localRagSettings: { ...localRagSettings, ...updates },
-      ragTestStatus: 'idle',
-      ragTestResult: null,
-    });
-  };
+  const updateRagSettings = useCallback((updates: Partial<RAGSettings>) => {
+    setLocalRagSettings(prev => ({ ...prev, ...updates }));
+    setRagTestStatus('idle');
+    setRagTestResult(null);
+  }, []);
 
-  const updateDeepResearch = (updates: Partial<DeepResearchSettings>) => {
-    setLegacyChatSettings({ localDeepResearch: { ...localDeepResearch, ...updates } });
-  };
+  const updateDeepResearch = useCallback((updates: Partial<DeepResearchSettings>) => {
+    setLocalDeepResearch(prev => ({ ...prev, ...updates }));
+  }, []);
 
-  const handleClear = () => {
-    setLegacyChatSettings({ localPrompt: '' });
-  };
+  const handleClear = useCallback(() => {
+    setLocalPrompt('');
+  }, []);
 
-  const toggleForkModel = (id: string) => {
-    setLegacyChatSettings({
-      forkSelection: { ...forkSelection, [id]: !forkSelection[id] },
-    });
-  };
+  const toggleForkModel = useCallback((id: string) => {
+    setForkSelection(prev => ({ ...prev, [id]: !prev[id] }));
+  }, []);
 
-  const forkSelected = () => {
+  const forkSelected = useCallback(() => {
     if (!onForkModels) return;
     const selected = Object.entries(forkSelection)
       .filter(([, v]) => v)
@@ -181,9 +170,9 @@ export function ChatSettingsModal({
       .filter((id) => id && id !== selectedModel);
     if (selected.length === 0) return;
     onForkModels(selected);
-    setLegacyChatSettings({ forkSelection: {} });
+    setForkSelection({});
     onClose();
-  };
+  }, [forkSelection, onForkModels, selectedModel, onClose]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black/50 p-0 md:p-4 overflow-auto">
@@ -502,7 +491,7 @@ export function ChatSettingsModal({
             </p>
             <textarea
               value={localPrompt}
-              onChange={(e) => setLegacyChatSettings({ localPrompt: e.target.value })}
+              onChange={(e) => setLocalPrompt(e.target.value)}
               placeholder="Enter a system prompt... (e.g., You are a helpful coding assistant.)"
               className="w-full h-64 px-3 py-2 text-sm bg-[var(--background)] border border-[var(--border)] rounded-lg resize-none focus:outline-none focus:border-[var(--foreground)] font-mono"
             />

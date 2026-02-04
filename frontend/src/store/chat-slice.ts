@@ -1,10 +1,7 @@
 // CRITICAL
 import type { StateCreator } from "zustand";
 
-interface Reaction {
-  type: "up" | "down";
-  count: number;
-}
+// Legacy interfaces removed - state migrated to local component state
 
 import type {
   ChatSession,
@@ -55,24 +52,7 @@ export interface ResearchProgress {
   error?: string;
 }
 
-export interface LegacyDeepResearchSettings {
-  enabled: boolean;
-  numSources: number;
-  autoSummarize: boolean;
-  includeCitations: boolean;
-  searchDepth: "quick" | "normal" | "thorough";
-}
-
-export interface LegacyRagSettings {
-  enabled: boolean;
-  endpoint: string;
-  apiKey?: string;
-  topK: number;
-  minScore: number;
-  includeMetadata: boolean;
-  contextPosition: "before" | "after" | "system";
-  useProxy: boolean;
-}
+// LegacyDeepResearchSettings and LegacyRagSettings removed - migrated to local component state
 
 export interface ChatState {
   sessions: ChatSession[];
@@ -179,63 +159,16 @@ export interface ChatState {
   resolvedTheme: "light" | "dark";
   themeMenuOpen: boolean;
 
-  legacyMessageSearch: {
-    query: string;
-    filterType: "all" | "user" | "assistant" | "bookmarked" | "hasCode";
-    isFilterOpen: boolean;
-    selectedIndex: number;
-  };
-
-  legacyToolCallCardState: Record<
-    string,
-    { isExpanded: boolean; showModal: boolean; modalCopied: boolean }
-  >;
-
-  legacyThinkingExpanded: Record<string, boolean>;
-
-  legacyMessageActions: Record<
-    string,
-    { copied: boolean; bookmarked: boolean; reaction: Reaction | null; showMenu: boolean }
-  >;
-
-  legacyContextIndicator: {
-    showDetails: boolean;
-    showHistory: boolean;
-    showSettings: boolean;
-  };
-
-  legacyChatSidebar: {
-    hoveredId: string | null;
-    searchQuery: string;
-    visibleCount: number;
-  };
-
-  legacyToolBelt: {
-    attachments: Attachment[];
-    isRecording: boolean;
-    isTranscribing: boolean;
-    transcriptionError: string | null;
-    isTTSEnabled: boolean;
-    recordingDuration: number;
-  };
-
-  legacyMcpSettings: {
-    localServers: MCPServer[];
-    isAdding: boolean;
-    newServer: { name: string; command: string; args: string; envKey: string; envValue: string };
-    envPairs: Array<{ key: string; value: string }>;
-    error: string | null;
-    saving: boolean;
-  };
-
-  legacyChatSettings: {
-    localPrompt: string;
-    forkSelection: Record<string, boolean>;
-    localDeepResearch: LegacyDeepResearchSettings;
-    localRagSettings: LegacyRagSettings;
-    ragTestStatus: "idle" | "testing" | "success" | "error";
-    ragTestResult: string | null;
-  };
+  // Legacy fields removed - all migrated to local component state:
+  // - legacyMessageSearch -> message-search.tsx
+  // - legacyToolCallCardState -> tool-call-card.tsx
+  // - legacyThinkingExpanded -> message-renderer.tsx, research-progress.tsx
+  // - legacyMessageActions -> message-actions.tsx
+  // - legacyContextIndicator -> context-indicator.tsx
+  // - legacyChatSidebar -> chat-sidebar.tsx
+  // - legacyToolBelt -> uses top-level fields (attachments, isRecording, etc.)
+  // - legacyMcpSettings -> mcp-settings-modal.tsx
+  // - legacyChatSettings -> chat-settings-modal.tsx
 }
 
 export interface ChatActions {
@@ -388,21 +321,7 @@ export interface ChatActions {
   setResolvedTheme: (resolvedTheme: "light" | "dark") => void;
   setThemeMenuOpen: (themeMenuOpen: boolean) => void;
 
-  setLegacyMessageSearch: (updates: Partial<ChatState["legacyMessageSearch"]>) => void;
-  setLegacyToolCallCardState: (
-    toolCallId: string,
-    updates: Partial<ChatState["legacyToolCallCardState"][string]>,
-  ) => void;
-  setLegacyThinkingExpanded: (key: string, expanded: boolean) => void;
-  setLegacyMessageActions: (
-    messageId: string,
-    updates: Partial<ChatState["legacyMessageActions"][string]>,
-  ) => void;
-  setLegacyContextIndicator: (updates: Partial<ChatState["legacyContextIndicator"]>) => void;
-  setLegacyChatSidebar: (updates: Partial<ChatState["legacyChatSidebar"]>) => void;
-  setLegacyToolBelt: (updates: Partial<ChatState["legacyToolBelt"]>) => void;
-  setLegacyMcpSettings: (updates: Partial<ChatState["legacyMcpSettings"]>) => void;
-  setLegacyChatSettings: (updates: Partial<ChatState["legacyChatSettings"]>) => void;
+  // Legacy setters removed - all migrated to local component state
 }
 
 export type ChatSlice = ChatState & ChatActions;
@@ -502,71 +421,7 @@ export const createChatSlice: StateCreator<ChatSlice, [], [], ChatSlice> = (set)
   resolvedTheme: "dark",
   themeMenuOpen: false,
 
-  legacyMessageSearch: {
-    query: "",
-    filterType: "all",
-    isFilterOpen: false,
-    selectedIndex: 0,
-  },
-
-  legacyToolCallCardState: {},
-
-  legacyThinkingExpanded: {},
-
-  legacyMessageActions: {},
-
-  legacyContextIndicator: {
-    showDetails: false,
-    showHistory: false,
-    showSettings: false,
-  },
-
-  legacyChatSidebar: {
-    hoveredId: null,
-    searchQuery: "",
-    visibleCount: 15,
-  },
-
-  legacyToolBelt: {
-    attachments: [],
-    isRecording: false,
-    isTranscribing: false,
-    transcriptionError: null,
-    isTTSEnabled: false,
-    recordingDuration: 0,
-  },
-
-  legacyMcpSettings: {
-    localServers: [],
-    isAdding: false,
-    newServer: { name: "", command: "", args: "", envKey: "", envValue: "" },
-    envPairs: [],
-    error: null,
-    saving: false,
-  },
-
-  legacyChatSettings: {
-    localPrompt: "",
-    forkSelection: {},
-    localDeepResearch: {
-      enabled: false,
-      numSources: 5,
-      autoSummarize: true,
-      includeCitations: true,
-      searchDepth: "normal",
-    },
-    localRagSettings: {
-      enabled: false,
-      endpoint: "http://localhost:3002",
-      topK: 5,
-      minScore: 0.0,
-      includeMetadata: true,
-      contextPosition: "system",
-      useProxy: true,
-    },
-    ragTestStatus: "idle",
-    ragTestResult: null,
-  },
+  // Legacy initial state removed - all migrated to local component state
 
   setSessions: (sessions) => set({ sessions }),
   updateSessions: (updater) => set((state) => ({ sessions: updater(state.sessions) })),
@@ -748,62 +603,5 @@ export const createChatSlice: StateCreator<ChatSlice, [], [], ChatSlice> = (set)
   setResolvedTheme: (resolvedTheme) => set({ resolvedTheme }),
   setThemeMenuOpen: (themeMenuOpen) => set({ themeMenuOpen }),
 
-  setLegacyMessageSearch: (updates) =>
-    set((state) => ({
-      legacyMessageSearch: { ...state.legacyMessageSearch, ...updates },
-    })),
-  setLegacyToolCallCardState: (toolCallId, updates) =>
-    set((state) => ({
-      legacyToolCallCardState: {
-        ...state.legacyToolCallCardState,
-        [toolCallId]: {
-          ...(state.legacyToolCallCardState[toolCallId] ?? {}),
-          isExpanded: false,
-          showModal: false,
-          modalCopied: false,
-          ...updates,
-        },
-      },
-    })),
-  setLegacyThinkingExpanded: (key, expanded) =>
-    set((state) => ({
-      legacyThinkingExpanded: {
-        ...state.legacyThinkingExpanded,
-        [key]: expanded,
-      },
-    })),
-  setLegacyMessageActions: (messageId, updates) =>
-    set((state) => ({
-      legacyMessageActions: {
-        ...state.legacyMessageActions,
-        [messageId]: {
-          ...(state.legacyMessageActions[messageId] ?? {}),
-          copied: false,
-          bookmarked: false,
-          reaction: null,
-          showMenu: false,
-          ...updates,
-        },
-      },
-    })),
-  setLegacyContextIndicator: (updates) =>
-    set((state) => ({
-      legacyContextIndicator: { ...state.legacyContextIndicator, ...updates },
-    })),
-  setLegacyChatSidebar: (updates) =>
-    set((state) => ({
-      legacyChatSidebar: { ...state.legacyChatSidebar, ...updates },
-    })),
-  setLegacyToolBelt: (updates) =>
-    set((state) => ({
-      legacyToolBelt: { ...state.legacyToolBelt, ...updates },
-    })),
-  setLegacyMcpSettings: (updates) =>
-    set((state) => ({
-      legacyMcpSettings: { ...state.legacyMcpSettings, ...updates },
-    })),
-  setLegacyChatSettings: (updates) =>
-    set((state) => ({
-      legacyChatSettings: { ...state.legacyChatSettings, ...updates },
-    })),
+  // Legacy setters removed - all migrated to local component state
 });

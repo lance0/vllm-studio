@@ -1,7 +1,7 @@
 // CRITICAL
 'use client';
 
-import { useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   X,
   Globe,
@@ -13,7 +13,6 @@ import {
   Terminal,
 } from 'lucide-react';
 import api from '@/lib/api';
-import { useAppStore } from '@/store';
 
 export interface MCPServerConfig {
   name: string;
@@ -31,19 +30,43 @@ interface MCPSettingsModalProps {
   onServersChange: (servers: MCPServerConfig[]) => void;
 }
 
+interface McpSettingsState {
+  localServers: MCPServerConfig[];
+  isAdding: boolean;
+  newServer: { name: string; command: string; args: string; envKey: string; envValue: string };
+  envPairs: Array<{ key: string; value: string }>;
+  error: string | null;
+  saving: boolean;
+}
+
+const initialNewServer = { name: '', command: '', args: '', envKey: '', envValue: '' };
+
 export function MCPSettingsModal({
   isOpen,
   onClose,
   servers,
   onServersChange,
 }: MCPSettingsModalProps) {
-  const legacyMcpSettings = useAppStore((state) => state.legacyMcpSettings);
-  const setLegacyMcpSettings = useAppStore((state) => state.setLegacyMcpSettings);
-  const { localServers, isAdding, newServer, envPairs, error, saving } = legacyMcpSettings;
+  // Local state instead of global Zustand store (migrated from legacyMcpSettings)
+  const [state, setState] = useState<McpSettingsState>(() => ({
+    localServers: servers,
+    isAdding: false,
+    newServer: initialNewServer,
+    envPairs: [],
+    error: null,
+    saving: false,
+  }));
+
+  const { localServers, isAdding, newServer, envPairs, error, saving } = state;
+
+  // Update helper using functional setState for stability
+  const updateState = useCallback((updates: Partial<McpSettingsState>) => {
+    setState(prev => ({ ...prev, ...updates }));
+  }, []);
 
   useEffect(() => {
-    setLegacyMcpSettings({ localServers: servers });
-  }, [servers, setLegacyMcpSettings]);
+    updateState({ localServers: servers });
+  }, [servers, updateState]);
 
   if (!isOpen) return null;
 
@@ -53,7 +76,7 @@ export function MCPSettingsModal({
     const nextEnabled = !current.enabled;
 
     // Optimistic UI update
-    setLegacyMcpSettings({
+    updateState({
       localServers: localServers.map((s) =>
         s.name === name ? { ...s, enabled: nextEnabled } : s,
       ),
@@ -63,7 +86,7 @@ export function MCPSettingsModal({
       await api.updateMCPServer(name, { enabled: nextEnabled });
     } catch (e) {
       // Revert on failure
-      setLegacyMcpSettings({
+      updateState({
         localServers: localServers.map((s) =>
           s.name === name ? { ...s, enabled: current.enabled } : s,
         ),
@@ -75,19 +98,19 @@ export function MCPSettingsModal({
   const removeServer = async (name: string) => {
     try {
       await api.removeMCPServer(name);
-      setLegacyMcpSettings({ localServers: localServers.filter((s) => s.name !== name) });
+      updateState({ localServers: localServers.filter((s) => s.name !== name) });
     } catch (e) {
-      setLegacyMcpSettings({ error: `Failed to remove server: ${e}` });
+      updateState({ error: `Failed to remove server: ${e}` });
     }
   };
 
   const addServer = async () => {
     if (!newServer.name || !newServer.command) {
-      setLegacyMcpSettings({ error: 'Name and command are required' });
+      updateState({ error: 'Name and command are required' });
       return;
     }
 
-    setLegacyMcpSettings({ saving: true, error: null });
+    updateState({ saving: true, error: null });
 
     try {
       const env: Record<string, string> = {};
@@ -110,16 +133,16 @@ export function MCPSettingsModal({
         env: server.env,
       });
 
-      setLegacyMcpSettings({
+      updateState({
         localServers: [...localServers, server],
         newServer: { name: '', command: '', args: '', envKey: '', envValue: '' },
         envPairs: [],
         isAdding: false,
       });
     } catch (e) {
-      setLegacyMcpSettings({ error: `Failed to add server: ${e}` });
+      updateState({ error: `Failed to add server: ${e}` });
     } finally {
-      setLegacyMcpSettings({ saving: false });
+      updateState({ saving: false });
     }
   };
 
@@ -139,17 +162,17 @@ export function MCPSettingsModal({
   };
 
   const addEnvPair = () => {
-    setLegacyMcpSettings({ envPairs: [...envPairs, { key: '', value: '' }] });
+    updateState({ envPairs: [...envPairs, { key: '', value: '' }] });
   };
 
   const updateEnvPair = (index: number, field: 'key' | 'value', value: string) => {
-    setLegacyMcpSettings({
+    updateState({
       envPairs: envPairs.map((pair, i) => (i === index ? { ...pair, [field]: value } : pair)),
     });
   };
 
   const removeEnvPair = (index: number) => {
-    setLegacyMcpSettings({ envPairs: envPairs.filter((_, i) => i !== index) });
+    updateState({ envPairs: envPairs.filter((_, i) => i !== index) });
   };
 
   return (
@@ -250,7 +273,7 @@ export function MCPSettingsModal({
                 placeholder="Server name (e.g., brave-search)"
                 value={newServer.name}
                 onChange={(e) =>
-                  setLegacyMcpSettings({ newServer: { ...newServer, name: e.target.value } })
+                  updateState({ newServer: { ...newServer, name: e.target.value } })
                 }
                 className="w-full px-3 py-2 text-sm bg-[var(--background)] border border-[var(--border)] rounded focus:outline-none focus:border-[var(--foreground)]"
               />
@@ -259,7 +282,7 @@ export function MCPSettingsModal({
                 placeholder="Command (e.g., npx)"
                 value={newServer.command}
                 onChange={(e) =>
-                  setLegacyMcpSettings({ newServer: { ...newServer, command: e.target.value } })
+                  updateState({ newServer: { ...newServer, command: e.target.value } })
                 }
                 className="w-full px-3 py-2 text-sm bg-[var(--background)] border border-[var(--border)] rounded focus:outline-none focus:border-[var(--foreground)]"
               />
@@ -268,7 +291,7 @@ export function MCPSettingsModal({
                 placeholder="Arguments (e.g., -y @modelcontextprotocol/server-brave-search)"
                 value={newServer.args}
                 onChange={(e) =>
-                  setLegacyMcpSettings({ newServer: { ...newServer, args: e.target.value } })
+                  updateState({ newServer: { ...newServer, args: e.target.value } })
                 }
                 className="w-full px-3 py-2 text-sm bg-[var(--background)] border border-[var(--border)] rounded focus:outline-none focus:border-[var(--foreground)]"
               />
@@ -313,7 +336,7 @@ export function MCPSettingsModal({
               <div className="flex gap-2">
                 <button
                   onClick={() => {
-                    setLegacyMcpSettings({
+                    updateState({
                       isAdding: false,
                       newServer: { name: '', command: '', args: '', envKey: '', envValue: '' },
                       envPairs: [],
@@ -334,7 +357,7 @@ export function MCPSettingsModal({
             </div>
           ) : (
             <button
-              onClick={() => setLegacyMcpSettings({ isAdding: true })}
+              onClick={() => updateState({ isAdding: true })}
               className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm border border-dashed border-[var(--border)] rounded-lg hover:bg-[var(--accent)] transition-colors"
             >
               <Plus className="h-4 w-4" />
