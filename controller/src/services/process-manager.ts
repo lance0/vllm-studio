@@ -9,6 +9,7 @@ import { setTimeout as delayTimeout } from "node:timers/promises";
 import { parse as parseYaml } from "yaml";
 import type { Config } from "../config/env";
 import { delay } from "../core/async";
+import { safeErrorMessage } from "../core/errors";
 import type { Logger } from "../core/logger";
 import type { LaunchResult, ProcessInfo, Recipe } from "../types/models";
 import type { EventManager } from "./event-manager";
@@ -236,7 +237,7 @@ export const createProcessManager = (
             }) as ChildProcess;
 
             child.on("error", (error) => {
-                spawnError = String(error);
+                spawnError = safeErrorMessage(error);
             });
 
             // Create log file stream
@@ -245,7 +246,7 @@ export const createProcessManager = (
                 logStream = createWriteStream(logFile, { flags: "a" });
             } catch (logError) {
                 logger.warn("Failed to open log file", {
-                    error: String(logError),
+                    error: safeErrorMessage(logError),
                 });
             }
 
@@ -324,11 +325,11 @@ export const createProcessManager = (
                 log_file: logFile,
             };
         } catch (error) {
-            logger.error("Launch failed", { error: String(error) });
+            logger.error("Launch failed", { error: safeErrorMessage(error) });
             return {
                 success: false,
                 pid: null,
-                message: String(error),
+                message: safeErrorMessage(error),
                 log_file: logFile,
             };
         }

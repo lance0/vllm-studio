@@ -1,11 +1,11 @@
 // CRITICAL
 import type { Hono } from "hono";
-import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AppContext } from "../types/context";
 import type { LaunchResult, Recipe } from "../types/models";
 import { AsyncLock, delay } from "../core/async";
-import { badRequest, notFound } from "../core/errors";
+import { badRequest, notFound, safeErrorMessage } from "../core/errors";
+import { pidExists, readLogTail } from "../services/process-utilities";
 import { parseRecipe } from "../stores/recipe-serializer";
 
 const switchLock = new AsyncLock();
@@ -17,38 +17,6 @@ const launchCancelControllers = new Map<string, AbortController>();
  * @param context - App context.
  */
 export const registerLifecycleRoutes = (app: Hono, context: AppContext): void => {
-  /**
-   * Check if a process id exists.
-   * @param pid - Process id.
-   * @returns True if process exists.
-   */
-  const pidExists = (pid: number): boolean => {
-    try {
-      process.kill(pid, 0);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  /**
-   * Read last N characters from a log file.
-   * @param path - Log file path.
-   * @param limit - Max chars.
-   * @returns Log tail string.
-   */
-  const readLogTail = (path: string, limit: number): string => {
-    if (!existsSync(path)) {
-      return "";
-    }
-    try {
-      const content = readFileSync(path, "utf-8");
-      return content.slice(Math.max(0, content.length - limit));
-    } catch {
-      return "";
-    }
-  };
-
   const serializeRecipeDetail = (recipe: Recipe): Record<string, unknown> => {
     const payload: Record<string, unknown> = {
       ...recipe,
@@ -103,7 +71,7 @@ export const registerLifecycleRoutes = (app: Hono, context: AppContext): void =>
       context.stores.recipeStore.save(recipe);
       return ctx.json({ success: true, id: recipe.id });
     } catch (error) {
-      throw badRequest(String(error));
+      throw badRequest(safeErrorMessage(error));
     }
   });
 
@@ -115,7 +83,7 @@ export const registerLifecycleRoutes = (app: Hono, context: AppContext): void =>
       context.stores.recipeStore.save(recipe);
       return ctx.json({ success: true, id: recipe.id });
     } catch (error) {
-      throw badRequest(String(error));
+      throw badRequest(safeErrorMessage(error));
     }
   });
 

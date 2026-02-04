@@ -45,3 +45,22 @@ export const badRequest = (detail: string): HttpStatus => new HttpStatus(400, de
  * @returns HttpStatus instance.
  */
 export const serviceUnavailable = (detail: string): HttpStatus => new HttpStatus(503, detail);
+
+/**
+ * Safely extract error message from unknown error type.
+ * Handles Error objects, strings, and other thrown values.
+ * @param error - Unknown error value.
+ * @returns Error message string.
+ */
+export const safeErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === "string") {
+    return error;
+  }
+  if (error && typeof error === "object" && "message" in error) {
+    return String((error as { message: unknown }).message);
+  }
+  return String(error);
+};

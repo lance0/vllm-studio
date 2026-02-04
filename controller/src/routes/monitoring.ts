@@ -2,6 +2,7 @@
 import type { Hono } from "hono";
 import { performance } from "node:perf_hooks";
 import type { AppContext } from "../types/context";
+import { safeErrorMessage } from "../core/errors";
 import { getGpuInfo } from "../services/gpu";
 
 /**
@@ -119,7 +120,7 @@ export const registerMonitoringRoutes = (app: Hono, context: AppContext): void =
       }
       return ctx.json({ error: "No tokens in response" });
     } catch (error) {
-      return ctx.json({ error: String(error) });
+      return ctx.json({ error: safeErrorMessage(error) });
     }
   });
 };

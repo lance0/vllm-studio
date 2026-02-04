@@ -1,9 +1,9 @@
 // CRITICAL
 import type { Hono } from "hono";
-import { readFileSync } from "node:fs";
 import { AsyncLock, delay } from "../core/async";
 import { HttpStatus, serviceUnavailable } from "../core/errors";
 import { buildSseHeaders } from "../http/sse";
+import { pidExists, readLogTail } from "../services/process-utilities";
 import type { AppContext } from "../types/context";
 import type { Recipe } from "../types/models";
 import type { ToolCallBuffer, ThinkState, Utf8State } from "../services/proxy-parsers";
@@ -114,35 +114,6 @@ export const registerProxyRoutes = (app: Hono, context: AppContext): void => {
       return `Model ${requestedModel} failed to become ready (timeout)`;
     } finally {
       release();
-    }
-  };
-
-  /**
-   * Check if a process id exists.
-   * @param pid - Process id.
-   * @returns True if process exists.
-   */
-  const pidExists = (pid: number): boolean => {
-    try {
-      process.kill(pid, 0);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  /**
-   * Read last N characters from a log file.
-   * @param path - Log file path.
-   * @param limit - Max chars.
-   * @returns Log tail string.
-   */
-  const readLogTail = (path: string, limit: number): string => {
-    try {
-      const content = readFileSync(path, "utf-8");
-      return content.slice(Math.max(0, content.length - limit));
-    } catch {
-      return "";
     }
   };
 

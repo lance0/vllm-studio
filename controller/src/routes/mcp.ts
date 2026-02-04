@@ -1,9 +1,11 @@
 // CRITICAL
 import type { Hono } from "hono";
+import { ZodError } from "zod";
 import type { AppContext } from "../types/context";
 import type { McpServer } from "../types/models";
-import { badRequest, notFound, HttpStatus } from "../core/errors";
+import { badRequest, notFound, HttpStatus, safeErrorMessage } from "../core/errors";
 import { runMcpCommand } from "../services/mcp-runner";
+import { createMcpServerSchema, updateMcpServerSchema, toolCallArgumentsSchema } from "../stores/mcp-schemas";
 
 /**
  * Register MCP routes.
@@ -44,24 +46,27 @@ export const registerMcpRoutes = (app: Hono, context: AppContext): void => {
   });
 
   app.post("/mcp/servers", async (ctx) => {
-    const body = (await ctx.req.json()) as Record<string, unknown>;
-    if (typeof body["id"] !== "string" || typeof body["name"] !== "string" || typeof body["command"] !== "string") {
-      throw badRequest("Invalid MCP server payload");
+    try {
+      const body = await ctx.req.json();
+      const parsed = createMcpServerSchema.parse(body);
+      const server: McpServer = {
+        id: parsed.id,
+        name: parsed.name,
+        enabled: parsed.enabled,
+        command: parsed.command,
+        args: parsed.args,
+        env: parsed.env,
+        description: parsed.description ?? null,
+        url: parsed.url ?? null,
+      };
+      context.stores.mcpStore.save(server);
+      return ctx.json(server);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw badRequest(error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", "));
+      }
+      throw error;
     }
-    const server: McpServer = {
-      id: body["id"],
-      name: body["name"],
-      enabled: body["enabled"] !== undefined ? Boolean(body["enabled"]) : true,
-      command: body["command"],
-      args: Array.isArray(body["args"]) ? body["args"].map(String) : [],
-      env: typeof body["env"] === "object" && body["env"]
-        ? Object.fromEntries(Object.entries(body["env"] as Record<string, unknown>).map(([key, value]) => [key, String(value)]))
-        : {},
-      description: typeof body["description"] === "string" ? body["description"] : null,
-      url: typeof body["url"] === "string" ? body["url"] : null,
-    };
-    context.stores.mcpStore.save(server);
-    return ctx.json(server);
   });
 
   app.put("/mcp/servers/:serverId", async (ctx) => {
@@ -70,21 +75,27 @@ export const registerMcpRoutes = (app: Hono, context: AppContext): void => {
     if (!existing) {
       throw notFound(`Server '${serverId}' not found`);
     }
-    const body = (await ctx.req.json()) as Record<string, unknown>;
-    const updated: McpServer = {
-      id: serverId,
-      name: typeof body["name"] === "string" ? body["name"] : existing.name,
-      enabled: body["enabled"] !== undefined ? Boolean(body["enabled"]) : existing.enabled,
-      command: typeof body["command"] === "string" ? body["command"] : existing.command,
-      args: Array.isArray(body["args"]) ? body["args"].map(String) : existing.args,
-      env: typeof body["env"] === "object" && body["env"]
-        ? Object.fromEntries(Object.entries(body["env"] as Record<string, unknown>).map(([key, value]) => [key, String(value)]))
-        : existing.env,
-      description: typeof body["description"] === "string" ? body["description"] : existing.description,
-      url: typeof body["url"] === "string" ? body["url"] : existing.url,
-    };
-    context.stores.mcpStore.save(updated);
-    return ctx.json(updated);
+    try {
+      const body = await ctx.req.json();
+      const parsed = updateMcpServerSchema.parse(body);
+      const updated: McpServer = {
+        id: serverId,
+        name: parsed.name ?? existing.name,
+        enabled: parsed.enabled ?? existing.enabled,
+        command: parsed.command ?? existing.command,
+        args: parsed.args ?? existing.args,
+        env: parsed.env ?? existing.env,
+        description: parsed.description !== undefined ? (parsed.description ?? null) : existing.description,
+        url: parsed.url !== undefined ? (parsed.url ?? null) : existing.url,
+      };
+      context.stores.mcpStore.save(updated);
+      return ctx.json(updated);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw badRequest(error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", "));
+      }
+      throw error;
+    }
   });
 
   app.delete("/mcp/servers/:serverId", async (ctx) => {
@@ -129,7 +140,7 @@ export const registerMcpRoutes = (app: Hono, context: AppContext): void => {
       const withServer = tools.map((tool) => ({ ...tool, server: serverId }));
       return ctx.json({ server: serverId, tools: withServer });
     } catch (error) {
-      throw new HttpStatus(500, String(error));
+      throw new HttpStatus(500, safeErrorMessage(error));
     }
   });
 
@@ -145,7 +156,7 @@ export const registerMcpRoutes = (app: Hono, context: AppContext): void => {
           tools.push({ ...tool, server: server.id });
         }
       } catch (error) {
-        errors.push({ server: server.id, error: String(error) });
+        errors.push({ server: server.id, error: safeErrorMessage(error) });
       }
     }
     return ctx.json({ tools, errors: errors.length > 0 ? errors : null });
@@ -180,7 +191,7 @@ export const registerMcpRoutes = (app: Hono, context: AppContext): void => {
       }
       return { result };
     } catch (error) {
-      throw new HttpStatus(500, String(error));
+      throw new HttpStatus(500, safeErrorMessage(error));
     }
   };
 
@@ -189,8 +200,12 @@ export const registerMcpRoutes = (app: Hono, context: AppContext): void => {
     const toolName = ctx.req.param("toolName");
     let body: Record<string, unknown> = {};
     try {
-      body = (await ctx.req.json()) as Record<string, unknown>;
-    } catch {
+      const rawBody = await ctx.req.json();
+      body = toolCallArgumentsSchema.parse(rawBody);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw badRequest(error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", "));
+      }
       body = {};
     }
     const result = await callServerTool(serverId, toolName, body);
@@ -202,8 +217,12 @@ export const registerMcpRoutes = (app: Hono, context: AppContext): void => {
     const toolName = ctx.req.param("toolName");
     let body: Record<string, unknown> = {};
     try {
-      body = (await ctx.req.json()) as Record<string, unknown>;
-    } catch {
+      const rawBody = await ctx.req.json();
+      body = toolCallArgumentsSchema.parse(rawBody);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw badRequest(error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", "));
+      }
       body = {};
     }
     const result = await callServerTool(serverId, toolName, body);

@@ -6,7 +6,7 @@ import { homedir } from "node:os";
 import type { AppContext } from "../types/context";
 import type { OpenAIModelInfo, OpenAIModelList, Recipe } from "../types/models";
 import { buildModelInfo, discoverModelDirectories } from "../services/model-browser";
-import { notFound } from "../core/errors";
+import { notFound, safeErrorMessage } from "../core/errors";
 
 /**
  * Register model-related routes.
@@ -240,7 +240,7 @@ export const registerModelsRoutes = (app: Hono, context: AppContext): void => {
       const data = await response.json();
       return ctx.json(data);
     } catch (error) {
-      return ctx.json({ detail: `Failed to reach HuggingFace API: ${String(error)}` }, { status: 503 });
+      return ctx.json({ detail: `Failed to reach HuggingFace API: ${safeErrorMessage(error)}` }, { status: 503 });
     }
   });
 };

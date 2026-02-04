@@ -124,6 +124,17 @@ export const registerUsageRoutes = (app: Hono, context: AppContext): void => {
         FROM spend_logs
       `).get() ?? { total_tokens: 0, prompt_tokens: 0, completion_tokens: 0, total_requests: 0, successful_requests: 0, failed_requests: 0, unique_sessions: 0 };
 
+      // Count unique users (api_key column may not exist in all LiteLLM versions)
+      let uniqueUsers = 0;
+      try {
+        const userCount = db.query<{ count: number }, []>(`
+          SELECT COUNT(DISTINCT api_key) as count FROM spend_logs WHERE api_key IS NOT NULL AND api_key != ''
+        `).get();
+        uniqueUsers = userCount?.count ?? 0;
+      } catch {
+        // api_key column doesn't exist, leave as 0
+      }
+
       // If no data at all, return empty response
       if (totals.total_requests === 0) {
         return ctx.json(emptyResponse());
@@ -409,7 +420,7 @@ export const registerUsageRoutes = (app: Hono, context: AppContext): void => {
           failed_requests: totals.failed_requests,
           success_rate: successRate,
           unique_sessions: totals.unique_sessions,
-          unique_users: 2, // Hardcoded for now
+          unique_users: uniqueUsers,
         },
         latency: {
           avg_ms: Math.round(latency.avg_ms ?? 0),

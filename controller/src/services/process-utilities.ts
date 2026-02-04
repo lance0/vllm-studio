@@ -243,3 +243,21 @@ export const collectChildren = (tree: Map<number, number[]>, pid: number, accumu
     }
   }
 };
+
+/**
+ * Read last N characters from a log file.
+ * @param path - Log file path.
+ * @param limit - Max characters to read.
+ * @returns Log tail string, or empty string if file doesn't exist or read fails.
+ */
+export const readLogTail = (path: string, limit: number): string => {
+  if (!existsSync(path)) {
+    return "";
+  }
+  try {
+    const content = readFileSync(path, "utf-8");
+    return content.slice(Math.max(0, content.length - limit));
+  } catch {
+    return "";
+  }
+};

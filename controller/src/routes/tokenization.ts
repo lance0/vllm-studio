@@ -1,6 +1,7 @@
 // CRITICAL
 import type { Hono } from "hono";
 import type { AppContext } from "../types/context";
+import { safeErrorMessage } from "../core/errors";
 
 /**
  * Register tokenization and title routes.
@@ -17,7 +18,7 @@ export const registerTokenizationRoutes = (app: Hono, context: AppContext): void
     try {
       body = await ctx.req.json();
     } catch (error) {
-      return ctx.json({ error: String(error), num_tokens: 0 });
+      return ctx.json({ error: safeErrorMessage(error), num_tokens: 0 });
     }
     try {
       const response = await fetch(`http://localhost:${context.config.inference_port}/tokenize`, {
@@ -30,7 +31,7 @@ export const registerTokenizationRoutes = (app: Hono, context: AppContext): void
       }
       return ctx.json({ error: `Tokenization failed: ${response.status}`, num_tokens: 0 });
     } catch (error) {
-      return ctx.json({ error: String(error), num_tokens: 0 });
+      return ctx.json({ error: safeErrorMessage(error), num_tokens: 0 });
     }
   });
 
@@ -43,7 +44,7 @@ export const registerTokenizationRoutes = (app: Hono, context: AppContext): void
     try {
       body = await ctx.req.json();
     } catch (error) {
-      return ctx.json({ error: String(error), text: "" });
+      return ctx.json({ error: safeErrorMessage(error), text: "" });
     }
     try {
       const response = await fetch(`http://localhost:${context.config.inference_port}/detokenize`, {
@@ -56,7 +57,7 @@ export const registerTokenizationRoutes = (app: Hono, context: AppContext): void
       }
       return ctx.json({ error: `Detokenization failed: ${response.status}`, text: "" });
     } catch (error) {
-      return ctx.json({ error: String(error), text: "" });
+      return ctx.json({ error: safeErrorMessage(error), text: "" });
     }
   });
 
@@ -69,7 +70,7 @@ export const registerTokenizationRoutes = (app: Hono, context: AppContext): void
     try {
       body = (await ctx.req.json()) as Record<string, unknown>;
     } catch (error) {
-      return ctx.json({ error: String(error), num_tokens: 0 });
+      return ctx.json({ error: safeErrorMessage(error), num_tokens: 0 });
     }
     const text = typeof body["text"] === "string" ? body["text"] : "";
     const model = typeof body["model"] === "string" ? body["model"] : (current.served_model_name ?? "default");
@@ -86,7 +87,7 @@ export const registerTokenizationRoutes = (app: Hono, context: AppContext): void
       }
       return ctx.json({ error: `Token count failed: ${response.status}`, num_tokens: 0 });
     } catch (error) {
-      return ctx.json({ error: String(error), num_tokens: 0 });
+      return ctx.json({ error: safeErrorMessage(error), num_tokens: 0 });
     }
   });
 
@@ -99,7 +100,7 @@ export const registerTokenizationRoutes = (app: Hono, context: AppContext): void
     try {
       body = (await ctx.req.json()) as Record<string, unknown>;
     } catch (error) {
-      return ctx.json({ error: String(error), input_tokens: 0 });
+      return ctx.json({ error: safeErrorMessage(error), input_tokens: 0 });
     }
     const messages = Array.isArray(body["messages"]) ? body["messages"] : [];
     const tools = Array.isArray(body["tools"]) ? body["tools"] : [];
@@ -242,7 +243,7 @@ Title:`;
 
       return ctx.json({ title: "New Chat" });
     } catch (error) {
-      context.logger.error("Title generation error", { error: String(error) });
+      context.logger.error("Title generation error", { error: safeErrorMessage(error) });
       return ctx.json({ title: "New Chat" });
     }
   });

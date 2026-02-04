@@ -1,8 +1,9 @@
 // CRITICAL
 import type { Hono } from "hono";
-import { readFileSync, appendFileSync } from "node:fs";
+import { appendFileSync } from "node:fs";
 import { AsyncLock, delay } from "../core/async";
 import { HttpStatus, serviceUnavailable } from "../core/errors";
+import { pidExists, readLogTail } from "../services/process-utilities";
 import type { AppContext } from "../types/context";
 import type { Recipe } from "../types/models";
 import type { ToolCallBuffer, ThinkState } from "../services/proxy-parsers";
@@ -77,17 +78,6 @@ export const registerProxyRoutesDebug = (app: Hono, context: AppContext): void =
     } finally {
       release();
     }
-  };
-
-  const pidExists = (pid: number): boolean => {
-    try { process.kill(pid, 0); return true; } catch { return false; }
-  };
-
-  const readLogTail = (path: string, limit: number): string => {
-    try {
-      const content = readFileSync(path, "utf-8");
-      return content.slice(Math.max(0, content.length - limit));
-    } catch { return ""; }
   };
 
   const extractToolName = (content: string): string => {
